@@ -1,4 +1,4 @@
-```html
+
 <!DOCTYPE html>
 <html lang="ja">
 <head>
@@ -13,7 +13,6 @@
     .logo-font {
       font-family: "MS Gothic", "Hiragino Sans", "Courier New", monospace;
     }
-    /* スピンボタン（上下の矢印）を非表示にする設定 */
     input[type="number"]::-webkit-outer-spin-button,
     input[type="number"]::-webkit-inner-spin-button {
       -webkit-appearance: none;
@@ -30,7 +29,6 @@
   <script type="text/babel">
     const { useState, useEffect } = React;
 
-    // アイコン群
     const FuelIcon = () => (
       <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="3" y1="22" x2="21" y2="22"></line><line x1="4" y1="9" x2="14" y2="9"></line><path d="M14 22V4a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v18"></path><path d="M14 13h2a2 2 0 0 1 2 2v2a2 2 0 0 0 2 2h0a2 2 0 0 0 2-2V9.83a2 2 0 0 0-.59-1.42L18 5"></path></svg>
     );
@@ -48,11 +46,10 @@
     );
 
     function App() {
-      // 状態管理
       const [fuelType, setFuelType] = useState('diesel'); 
       const [volume, setVolume] = useState('50');
       const [pricePerLiter, setPricePerLiter] = useState('130');
-      const [receivedAmount, setReceivedAmount] = useState(''); // お預かり金額用ステート
+      const [receivedAmount, setReceivedAmount] = useState('');
       
       const [result, setResult] = useState({
         totalAmount: 0,
@@ -62,7 +59,6 @@
         savedAmount: 0,
       });
 
-      // 定数
       const NEW_TAX_RATE = 15.0; 
       const OLD_TAX_RATE = 32.1; 
       const CONSUMPTION_TAX_RATE = 0.10; 
@@ -112,7 +108,6 @@
         }
       };
 
-      // お釣り計算ロジック
       const parsedReceived = parseInt(receivedAmount, 10);
       let changeAmount = 0;
       let hasReceivedInput = false;
@@ -122,7 +117,6 @@
         changeAmount = parsedReceived - result.totalAmount;
       }
 
-      // 入力時に全選択状態にするためのハンドラー
       const handleFocus = (e) => e.target.select();
 
       return (
@@ -138,12 +132,12 @@
               <p className="text-gray-400 mt-1 text-sm font-mono">Ver. 2026 / ㈱中野油業</p>
             </div>
 
-            <div className="p-6 space-y-6">
+            <div className="p-4 sm:p-6 space-y-6">
               
               {/* 油種切り替えタブ */}
               <div className="flex bg-gray-100 rounded-xl p-1 border border-gray-200">
                 <button
-                  className={`flex-1 py-2.5 text-sm font-bold rounded-lg transition-all ${
+                  className={`flex-1 flex flex-col items-center justify-center py-2 px-1 text-[11px] sm:text-xs font-bold rounded-lg transition-all leading-snug ${
                     fuelType === 'diesel' 
                       ? 'bg-white shadow-sm text-red-600 border border-gray-200' 
                       : 'text-gray-500 hover:text-gray-700'
@@ -153,10 +147,11 @@
                     setPricePerLiter('130');
                   }}
                 >
-                  軽油 (免税計算)
+                  <span>一般軽油</span>
+                  <span>(軽油税計算)</span>
                 </button>
                 <button
-                  className={`flex-1 py-2.5 text-sm font-bold rounded-lg transition-all ${
+                  className={`flex-1 flex flex-col items-center justify-center py-2 px-1 text-[11px] sm:text-xs font-bold rounded-lg transition-all leading-snug ${
                     fuelType === 'other' 
                       ? 'bg-white shadow-sm text-red-600 border border-gray-200' 
                       : 'text-gray-500 hover:text-gray-700'
@@ -166,7 +161,8 @@
                     setPricePerLiter('160');
                   }}
                 >
-                  その他 (ガソリン等)
+                  <span>免税軽油・重油</span>
+                  <span>灯油・ガソリン等</span>
                 </button>
               </div>
 
@@ -238,7 +234,7 @@
                 </div>
               </div>
 
-              {/* ★お釣り計算セクション追加★ */}
+              {/* お釣り計算セクション */}
               <div className="bg-amber-50 rounded-xl p-5 border border-amber-200 mt-4 shadow-sm">
                 <div className="flex items-center gap-2 mb-4 text-amber-800">
                   <BanknoteIcon />
@@ -255,7 +251,7 @@
                         onChange={(e) => setReceivedAmount(e.target.value)}
                         onFocus={handleFocus}
                         className="w-full pl-4 pr-12 py-3 bg-white border border-amber-300 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none transition-all text-lg font-medium"
-                        placeholder="お客様からのお預かり額を入力"
+                        placeholder="預かり額を入力"
                       />
                       <span className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 font-medium">円</span>
                     </div>
@@ -287,6 +283,14 @@
                     </div>
                   </div>
                 </>
+              )}
+              
+              {/* その他の場合のみ表示するアラート */}
+              {fuelType === 'other' && (
+                <div className="flex gap-2 text-xs text-gray-500 bg-gray-100 p-3 rounded-lg mt-6">
+                  <div className="shrink-0 text-gray-400"><InfoIcon /></div>
+                  <p>免税軽油や重油などには軽油引取税がかからないため、こちらのモードで税込総額から10%の消費税を割り戻して計算します。</p>
+                </div>
               )}
 
               {/* ★中野油業 オリジナルロゴフッター★ */}
@@ -325,5 +329,6 @@
   </script>
 </body>
 </html>
+
 
 ```
