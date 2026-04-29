@@ -4,7 +4,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>総合燃料費シミュレーター | ㈱中野油業</title>
+  <title>総合燃料費計算 | ㈱中野油業</title>
   <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
   <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
@@ -44,11 +44,19 @@
     const BanknoteIcon = () => (
       <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="6" width="20" height="12" rx="2"></rect><circle cx="12" cy="12" r="2"></circle><path d="M6 12h.01M18 12h.01"></path></svg>
     );
+    const DropletIcon = () => (
+      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"></path></svg>
+    );
 
     function App() {
       const [fuelType, setFuelType] = useState('diesel'); 
       const [volume, setVolume] = useState('50');
       const [pricePerLiter, setPricePerLiter] = useState('130');
+      
+      // ポリ缶配達用のステート
+      const [can18, setCan18] = useState('');
+      const [can20, setCan20] = useState('');
+      
       const [receivedAmount, setReceivedAmount] = useState('');
       
       const [result, setResult] = useState({
@@ -57,6 +65,7 @@
         taxAmount: 0,
         consumptionTaxTotal: 0,
         savedAmount: 0,
+        calculatedVolume: 0, // ポリ缶計算用の総リットル数
       });
 
       const NEW_TAX_RATE = 15.0; 
@@ -65,22 +74,39 @@
 
       useEffect(() => {
         calculate();
-      }, [volume, pricePerLiter, fuelType]);
+      }, [volume, pricePerLiter, fuelType, can18, can20]);
 
       const calculate = () => {
-        const v = parseFloat(volume);
         const p = parseFloat(pricePerLiter);
-
-        if (isNaN(v) || isNaN(p) || v <= 0 || p <= 0) {
-          setResult({
-            totalAmount: 0, basePriceTotal: 0, taxAmount: 0, consumptionTaxTotal: 0, savedAmount: 0,
-          });
+        if (isNaN(p) || p <= 0) {
+          resetResult();
           return;
+        }
+
+        let v = 0;
+
+        // 給油量の決定（ポリ缶モードか、通常モードか）
+        if (fuelType === 'polycan') {
+          const c18 = parseInt(can18) || 0;
+          const c20 = parseInt(can20) || 0;
+          v = (c18 * 18) + (c20 * 20);
+          
+          if (v <= 0) {
+            resetResult();
+            return;
+          }
+        } else {
+          v = parseFloat(volume);
+          if (isNaN(v) || v <= 0) {
+            resetResult();
+            return;
+          }
         }
 
         const totalAmount = p * v;
 
         if (fuelType === 'diesel') {
+          // 一般軽油（軽油引取税を考慮）
           const taxAmount = v * NEW_TAX_RATE;
           const basePricePerLiter = (p - NEW_TAX_RATE) / (1 + CONSUMPTION_TAX_RATE);
           const basePriceTotal = basePricePerLiter * v;
@@ -93,8 +119,10 @@
             taxAmount: Math.round(taxAmount),
             consumptionTaxTotal: Math.round(consumptionTaxTotal),
             savedAmount: Math.round(savedAmount),
+            calculatedVolume: v,
           });
         } else {
+          // その他 ＆ ポリ缶（総額から消費税を割り戻す）
           const basePriceTotal = totalAmount / (1 + CONSUMPTION_TAX_RATE);
           const consumptionTaxTotal = totalAmount - basePriceTotal;
 
@@ -104,9 +132,16 @@
             taxAmount: 0,
             consumptionTaxTotal: Math.round(consumptionTaxTotal),
             savedAmount: 0,
+            calculatedVolume: v,
           });
         }
       };
+
+      const resetResult = () => {
+        setResult({
+          totalAmount: 0, basePriceTotal: 0, taxAmount: 0, consumptionTaxTotal: 0, savedAmount: 0, calculatedVolume: 0
+        });
+      }
 
       const parsedReceived = parseInt(receivedAmount, 10);
       let changeAmount = 0;
@@ -120,26 +155,26 @@
       const handleFocus = (e) => e.target.select();
 
       return (
-        <div className="min-h-screen p-4 md:p-8 font-sans text-gray-800">
+        <div className="min-h-screen p-2 md:p-8 font-sans text-gray-800">
           <div className="max-w-md mx-auto bg-white rounded-2xl shadow-xl overflow-hidden border border-gray-200">
             
             {/* Header */}
-            <div className="bg-gray-900 p-6 text-white text-center border-b-4 border-red-600">
+            <div className="bg-gray-900 p-5 sm:p-6 text-white text-center border-b-4 border-red-600">
               <div className="flex justify-center mb-3 text-red-500">
                 <FuelIcon />
               </div>
-              <h1 className="text-2xl font-bold tracking-tight">現金決済用電卓</h1>
-              <p className="text-gray-400 mt-1 text-sm font-mono">Ver. 2026 / ㈱中野油業</p>
+              <h1 className="text-xl sm:text-2xl font-bold tracking-tight">総合燃料費シミュレーター</h1>
+              <p className="text-gray-400 mt-1 text-xs sm:text-sm font-mono">Ver. 2026 / ㈱中野油業</p>
             </div>
 
             <div className="p-4 sm:p-6 space-y-6">
               
-              {/* 油種切り替えタブ */}
-              <div className="flex bg-gray-100 rounded-xl p-1 border border-gray-200">
+              {/* 油種切り替えタブ (3つに分割) */}
+              <div className="flex bg-gray-100 rounded-xl p-1 border border-gray-200 shadow-inner">
                 <button
-                  className={`flex-1 flex flex-col items-center justify-center py-2 px-1 text-[11px] sm:text-xs font-bold rounded-lg transition-all leading-snug ${
+                  className={`flex-1 flex flex-col items-center justify-center py-2 px-1 text-[10px] sm:text-xs font-bold rounded-lg transition-all leading-tight ${
                     fuelType === 'diesel' 
-                      ? 'bg-white shadow-sm text-red-600 border border-gray-200' 
+                      ? 'bg-white shadow text-red-600 border border-gray-200' 
                       : 'text-gray-500 hover:text-gray-700'
                   }`}
                   onClick={() => {
@@ -148,12 +183,12 @@
                   }}
                 >
                   <span>一般軽油</span>
-                  <span>(軽油税計算)</span>
+                  <span>(軽油税)</span>
                 </button>
                 <button
-                  className={`flex-1 flex flex-col items-center justify-center py-2 px-1 text-[11px] sm:text-xs font-bold rounded-lg transition-all leading-snug ${
+                  className={`flex-1 flex flex-col items-center justify-center py-2 px-1 text-[10px] sm:text-xs font-bold rounded-lg transition-all leading-tight ${
                     fuelType === 'other' 
-                      ? 'bg-white shadow-sm text-red-600 border border-gray-200' 
+                      ? 'bg-white shadow text-red-600 border border-gray-200' 
                       : 'text-gray-500 hover:text-gray-700'
                   }`}
                   onClick={() => {
@@ -161,31 +196,31 @@
                     setPricePerLiter('160');
                   }}
                 >
-                  <span>免税軽油・重油</span>
-                  <span>灯油・ガソリン等</span>
+                  <span>免税・重油</span>
+                  <span>ガソリン等</span>
+                </button>
+                <button
+                  className={`flex-1 flex flex-col items-center justify-center py-2 px-1 text-[10px] sm:text-xs font-bold rounded-lg transition-all leading-tight ${
+                    fuelType === 'polycan' 
+                      ? 'bg-white shadow text-red-600 border border-gray-200' 
+                      : 'text-gray-500 hover:text-gray-700'
+                  }`}
+                  onClick={() => {
+                    setFuelType('polycan');
+                    setPricePerLiter('110'); // 灯油の目安単価
+                  }}
+                >
+                  <span>ポリ缶配達</span>
+                  <span>(18L/20L)</span>
                 </button>
               </div>
 
               {/* Input Section */}
               <div className="space-y-4">
+                
+                {/* 共通: 単価入力 */}
                 <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-1">給油量 (リットル)</label>
-                  <div className="relative">
-                    <input
-                      type="number"
-                      value={volume}
-                      onChange={(e) => setVolume(e.target.value)}
-                      onFocus={handleFocus}
-                      className="w-full pl-4 pr-12 py-3 bg-gray-50 border border-gray-300 rounded-xl focus:ring-2 focus:ring-red-500 focus:border-red-500 outline-none transition-all text-lg font-medium"
-                      placeholder="0"
-                      step="0.1"
-                    />
-                    <span className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 font-medium">L</span>
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-1">配送運賃込単価 (税込)</label>
+                  <label className="block text-sm font-semibold text-gray-700 mb-1">店頭表示単価 (税込)</label>
                   <div className="relative">
                     <input
                       type="number"
@@ -199,6 +234,70 @@
                     <span className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 font-medium">円/L</span>
                   </div>
                 </div>
+
+                {/* 分岐: 給油量 or 缶数入力 */}
+                {fuelType === 'polycan' ? (
+                  <div className="bg-blue-50/50 p-4 rounded-xl border border-blue-100 space-y-4">
+                    <label className="block text-sm font-semibold text-gray-700 mb-1">配達する缶数</label>
+                    <div className="flex gap-3">
+                      <div className="flex-1">
+                        <label className="block text-xs font-bold text-gray-600 mb-1 text-center">18L 缶</label>
+                        <div className="relative">
+                          <input
+                            type="number"
+                            value={can18}
+                            onChange={(e) => setCan18(e.target.value)}
+                            onFocus={handleFocus}
+                            className="w-full pl-3 pr-8 py-3 bg-white border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all text-center text-lg font-bold text-blue-700"
+                            placeholder="0"
+                          />
+                          <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">缶</span>
+                        </div>
+                      </div>
+                      <div className="flex-1">
+                        <label className="block text-xs font-bold text-gray-600 mb-1 text-center">20L 缶</label>
+                        <div className="relative">
+                          <input
+                            type="number"
+                            value={can20}
+                            onChange={(e) => setCan20(e.target.value)}
+                            onFocus={handleFocus}
+                            className="w-full pl-3 pr-8 py-3 bg-white border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all text-center text-lg font-bold text-blue-700"
+                            placeholder="0"
+                          />
+                          <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">缶</span>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    {/* 合計給油量ハイライト */}
+                    <div className="flex justify-between items-center bg-white p-3 rounded-lg border border-blue-200">
+                      <div className="flex items-center gap-1 text-blue-800 font-bold text-sm">
+                        <DropletIcon />
+                        <span>合計給油量</span>
+                      </div>
+                      <div className="text-xl font-black text-blue-600">
+                        {result.calculatedVolume} <span className="text-sm font-medium text-blue-400">L</span>
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-1">給油量 (リットル)</label>
+                    <div className="relative">
+                      <input
+                        type="number"
+                        value={volume}
+                        onChange={(e) => setVolume(e.target.value)}
+                        onFocus={handleFocus}
+                        className="w-full pl-4 pr-12 py-3 bg-gray-50 border border-gray-300 rounded-xl focus:ring-2 focus:ring-red-500 focus:border-red-500 outline-none transition-all text-lg font-medium"
+                        placeholder="0"
+                        step="0.1"
+                      />
+                      <span className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 font-medium">L</span>
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* Results Section */}
@@ -271,30 +370,34 @@
                 </div>
               </div>
 
-              {/* 軽油の場合のみ表示するアラート群 */}
+              {/* インフォメーション・アラート群 */}
               {fuelType === 'diesel' && (
-                <>
-                  <div className="bg-red-50 rounded-xl p-4 border border-red-100 flex items-start gap-3 mt-6">
-                    <div className="text-red-600 shrink-0 mt-0.5"><TrendingDownIcon /></div>
-                    <div>
-                      <p className="text-sm text-red-800 font-bold">暫定税率時代からの値下げ額</p>
-                      <p className="text-2xl font-black text-red-600 mt-1">-¥{result.savedAmount.toLocaleString()}</p>
-                      <p className="text-xs text-red-700 mt-1">※旧税率32.1円/Lで計算した場合との差額</p>
-                    </div>
+                <div className="bg-red-50 rounded-xl p-4 border border-red-100 flex items-start gap-3 mt-6">
+                  <div className="text-red-600 shrink-0 mt-0.5"><TrendingDownIcon /></div>
+                  <div>
+                    <p className="text-sm text-red-800 font-bold">暫定税率時代からの値下げ額</p>
+                    <p className="text-2xl font-black text-red-600 mt-1">-¥{result.savedAmount.toLocaleString()}</p>
+                    <p className="text-xs text-red-700 mt-1">※旧税率32.1円/Lで計算した場合との差額</p>
                   </div>
-                </>
+                </div>
               )}
               
-              {/* その他の場合のみ表示するアラート */}
               {fuelType === 'other' && (
                 <div className="flex gap-2 text-xs text-gray-500 bg-gray-100 p-3 rounded-lg mt-6">
                   <div className="shrink-0 text-gray-400"><InfoIcon /></div>
-                  <p>免税軽油や重油などには軽油引取税がかからないため、こちらのモードで税込総額から10%の消費税を割り戻して計算します。</p>
+                  <p>免税軽油や重油などには軽油引取税がかからないため、税込総額から10%の消費税を割り戻して計算します。</p>
+                </div>
+              )}
+
+              {fuelType === 'polycan' && (
+                <div className="flex gap-2 text-xs text-blue-600 bg-blue-50 p-3 rounded-lg mt-6 border border-blue-100">
+                  <div className="shrink-0 text-blue-500"><InfoIcon /></div>
+                  <p>灯油の小口配達モードです。18L缶と20L缶の数量を入力するだけで、総リットル数と合計金額を自動計算します。</p>
                 </div>
               )}
 
               {/* ★中野油業 オリジナルロゴフッター★ */}
-              <div className="mt-8 bg-black p-6 rounded-xl flex flex-col items-center justify-center w-full overflow-hidden shadow-inner border border-gray-800">
+              <div className="mt-8 bg-black p-5 sm:p-6 rounded-xl flex flex-col items-center justify-center w-full overflow-hidden shadow-inner border border-gray-800">
                 <div className="flex items-center text-3xl sm:text-4xl font-black tracking-[0.1em] mb-1 logo-font">
                   <span className="text-white">㈱中野</span>
                   <span className="text-[#ff0000] mx-0.5">油</span>
@@ -329,6 +432,5 @@
   </script>
 </body>
 </html>
-
 
 ```
