@@ -1,4 +1,4 @@
-
+```html
 <!DOCTYPE html>
 <html lang="ja">
 <head>
@@ -54,8 +54,11 @@
       const [pricePerLiter, setPricePerLiter] = useState('130');
       
       // ポリ缶配達用のステート
+      const [priceCan18, setPriceCan18] = useState('2000');
+      const [priceCan20, setPriceCan20] = useState('2222');
       const [can18, setCan18] = useState('');
       const [can20, setCan20] = useState('');
+      const [otherVolume, setOtherVolume] = useState(''); // その他のリットル数
       
       const [receivedAmount, setReceivedAmount] = useState('');
       
@@ -65,7 +68,7 @@
         taxAmount: 0,
         consumptionTaxTotal: 0,
         savedAmount: 0,
-        calculatedVolume: 0, // ポリ缶計算用の総リットル数
+        calculatedVolume: 0,
       });
 
       const NEW_TAX_RATE = 15.0; 
@@ -74,39 +77,75 @@
 
       useEffect(() => {
         calculate();
-      }, [volume, pricePerLiter, fuelType, can18, can20]);
+      }, [volume, pricePerLiter, fuelType, can18, can20, otherVolume, priceCan18, priceCan20]);
+
+      // 18L缶の単価入力ハンドラー（20Lを自動計算）
+      const handlePriceCan18Change = (e) => {
+        const val = e.target.value;
+        setPriceCan18(val);
+        
+        const p18 = parseInt(val, 10);
+        if (!isNaN(p18) && p18 > 0) {
+          const calculated20 = Math.round((p18 / 18) * 20);
+          setPriceCan20(calculated20.toString());
+        } else {
+          setPriceCan20('');
+        }
+      };
 
       const calculate = () => {
+        let v = 0;
+        let totalAmount = 0;
+
+        // ポリ缶配達モードの計算
+        if (fuelType === 'polycan') {
+          const c18 = parseInt(can18, 10) || 0;
+          const c20 = parseInt(can20, 10) || 0;
+          const oVol = parseFloat(otherVolume) || 0;
+          const p18 = parseInt(priceCan18, 10) || 0;
+          const p20 = parseInt(priceCan20, 10) || 0;
+          
+          const unitPriceL = p18 / 18; // 1Lあたりの単価
+          
+          v = (c18 * 18) + (c20 * 20) + oVol;
+          totalAmount = (c18 * p18) + (c20 * p20) + Math.round(unitPriceL * oVol);
+          
+          if (v <= 0) {
+            resetResult();
+            return;
+          }
+
+          // 内税計算（総額から消費税を割り戻す）
+          const basePriceTotal = totalAmount / (1 + CONSUMPTION_TAX_RATE);
+          const consumptionTaxTotal = totalAmount - basePriceTotal;
+
+          setResult({
+            totalAmount: Math.round(totalAmount),
+            basePriceTotal: Math.round(basePriceTotal),
+            taxAmount: 0,
+            consumptionTaxTotal: Math.round(consumptionTaxTotal),
+            savedAmount: 0,
+            calculatedVolume: v,
+          });
+          return;
+        }
+
+        // 一般軽油・その他の計算
         const p = parseFloat(pricePerLiter);
         if (isNaN(p) || p <= 0) {
           resetResult();
           return;
         }
 
-        let v = 0;
-
-        // 給油量の決定（ポリ缶モードか、通常モードか）
-        if (fuelType === 'polycan') {
-          const c18 = parseInt(can18) || 0;
-          const c20 = parseInt(can20) || 0;
-          v = (c18 * 18) + (c20 * 20);
-          
-          if (v <= 0) {
-            resetResult();
-            return;
-          }
-        } else {
-          v = parseFloat(volume);
-          if (isNaN(v) || v <= 0) {
-            resetResult();
-            return;
-          }
+        v = parseFloat(volume);
+        if (isNaN(v) || v <= 0) {
+          resetResult();
+          return;
         }
 
-        const totalAmount = p * v;
+        totalAmount = p * v;
 
         if (fuelType === 'diesel') {
-          // 一般軽油（軽油引取税を考慮）
           const taxAmount = v * NEW_TAX_RATE;
           const basePricePerLiter = (p - NEW_TAX_RATE) / (1 + CONSUMPTION_TAX_RATE);
           const basePriceTotal = basePricePerLiter * v;
@@ -122,7 +161,6 @@
             calculatedVolume: v,
           });
         } else {
-          // その他 ＆ ポリ缶（総額から消費税を割り戻す）
           const basePriceTotal = totalAmount / (1 + CONSUMPTION_TAX_RATE);
           const consumptionTaxTotal = totalAmount - basePriceTotal;
 
@@ -154,6 +192,10 @@
 
       const handleFocus = (e) => e.target.select();
 
+      // 現在の1L単価を計算 (表示用)
+      const currentP18 = parseInt(priceCan18, 10);
+      const displayUnitPriceL = (!isNaN(currentP18) && currentP18 > 0) ? (currentP18 / 18).toFixed(1) : 0;
+
       return (
         <div className="min-h-screen p-2 md:p-8 font-sans text-gray-800">
           <div className="max-w-md mx-auto bg-white rounded-2xl shadow-xl overflow-hidden border border-gray-200">
@@ -169,7 +211,7 @@
 
             <div className="p-4 sm:p-6 space-y-6">
               
-              {/* 油種切り替えタブ (3つに分割) */}
+              {/* 油種切り替えタブ */}
               <div className="flex bg-gray-100 rounded-xl p-1 border border-gray-200 shadow-inner">
                 <button
                   className={`flex-1 flex flex-col items-center justify-center py-2 px-1 text-[10px] sm:text-xs font-bold rounded-lg transition-all leading-tight ${
@@ -177,10 +219,7 @@
                       ? 'bg-white shadow text-red-600 border border-gray-200' 
                       : 'text-gray-500 hover:text-gray-700'
                   }`}
-                  onClick={() => {
-                    setFuelType('diesel');
-                    setPricePerLiter('130');
-                  }}
+                  onClick={() => setFuelType('diesel')}
                 >
                   <span>一般軽油</span>
                   <span>(軽油税)</span>
@@ -191,10 +230,7 @@
                       ? 'bg-white shadow text-red-600 border border-gray-200' 
                       : 'text-gray-500 hover:text-gray-700'
                   }`}
-                  onClick={() => {
-                    setFuelType('other');
-                    setPricePerLiter('160');
-                  }}
+                  onClick={() => setFuelType('other')}
                 >
                   <span>免税・重油</span>
                   <span>ガソリン等</span>
@@ -205,68 +241,163 @@
                       ? 'bg-white shadow text-red-600 border border-gray-200' 
                       : 'text-gray-500 hover:text-gray-700'
                   }`}
-                  onClick={() => {
-                    setFuelType('polycan');
-                    setPricePerLiter('110'); // 灯油の目安単価
-                  }}
+                  onClick={() => setFuelType('polycan')}
                 >
                   <span>ポリ缶配達</span>
-                  <span>(18L/20L)</span>
+                  <span>(缶単価)</span>
                 </button>
               </div>
 
               {/* Input Section */}
               <div className="space-y-4">
                 
-                {/* 共通: 単価入力 */}
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-1">配送料込価格
-                    (税込)</label>
-                  <div className="relative">
-                    <input
-                      type="number"
-                      value={pricePerLiter}
-                      onChange={(e) => setPricePerLiter(e.target.value)}
-                      onFocus={handleFocus}
-                      className="w-full pl-4 pr-16 py-3 bg-gray-50 border border-gray-300 rounded-xl focus:ring-2 focus:ring-red-500 focus:border-red-500 outline-none transition-all text-lg font-medium"
-                      placeholder="0"
-                      step="0.1"
-                    />
-                    <span className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 font-medium">円/L</span>
+                {/* 一般・その他の場合 */}
+                {fuelType !== 'polycan' && (
+                  <div className="space-y-4">
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-700 mb-1">配送料込価格 (税込)</label>
+                      <div className="relative">
+                        <input
+                          type="number"
+                          value={pricePerLiter}
+                          onChange={(e) => setPricePerLiter(e.target.value)}
+                          onFocus={handleFocus}
+                          className="w-full pl-4 pr-16 py-3 bg-gray-50 border border-gray-300 rounded-xl focus:ring-2 focus:ring-red-500 focus:border-red-500 outline-none transition-all text-lg font-medium"
+                          placeholder="0"
+                          step="0.1"
+                        />
+                        <span className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 font-medium">円/L</span>
+                      </div>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-700 mb-1">給油量 (リットル)</label>
+                      <div className="relative">
+                        <input
+                          type="number"
+                          value={volume}
+                          onChange={(e) => setVolume(e.target.value)}
+                          onFocus={handleFocus}
+                          className="w-full pl-4 pr-12 py-3 bg-gray-50 border border-gray-300 rounded-xl focus:ring-2 focus:ring-red-500 focus:border-red-500 outline-none transition-all text-lg font-medium"
+                          placeholder="0"
+                          step="0.1"
+                        />
+                        <span className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 font-medium">L</span>
+                      </div>
+                    </div>
                   </div>
-                </div>
+                )}
 
-                {/* 分岐: 給油量 or 缶数入力 */}
-                {fuelType === 'polycan' ? (
+                {/* ポリ缶配達の場合 */}
+                {fuelType === 'polycan' && (
                   <div className="bg-blue-50/50 p-4 rounded-xl border border-blue-100 space-y-4">
-                    <label className="block text-sm font-semibold text-gray-700 mb-1">配達する缶数</label>
-                    <div className="flex gap-3">
-                      <div className="flex-1">
-                        <label className="block text-xs font-bold text-gray-600 mb-1 text-center">18L 缶</label>
-                        <div className="relative">
-                          <input
-                            type="number"
-                            value={can18}
-                            onChange={(e) => setCan18(e.target.value)}
-                            onFocus={handleFocus}
-                            className="w-full pl-3 pr-8 py-3 bg-white border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all text-center text-lg font-bold text-blue-700"
-                            placeholder="0"
-                          />
-                          <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">缶</span>
+                    <div className="flex justify-between items-end mb-1">
+                      <label className="block text-sm font-semibold text-gray-700">単価と配達数</label>
+                      <div className="text-xs font-bold text-red-600 bg-red-50 px-2 py-1 rounded border border-red-100 shadow-sm">
+                        1L換算: 約 <span className="text-base">{displayUnitPriceL}</span> 円
+                      </div>
+                    </div>
+                    
+                    {/* 18L缶ブロック */}
+                    <div className="bg-white p-3 rounded-xl border border-blue-200 shadow-sm">
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="font-bold text-blue-800">18L 缶 <span className="text-xs font-normal text-gray-500">(基準単価)</span></span>
+                      </div>
+                      <div className="flex gap-2">
+                        <div className="flex-[3]">
+                          <label className="block text-[11px] font-bold text-gray-500 mb-1">1缶の単価 (税込)</label>
+                          <div className="relative">
+                            <input
+                              type="number"
+                              value={priceCan18}
+                              onChange={handlePriceCan18Change}
+                              onFocus={handleFocus}
+                              className="w-full pl-2 pr-6 py-2 bg-gray-50 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-right font-medium"
+                              placeholder="0"
+                            />
+                            <span className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 text-xs">円</span>
+                          </div>
+                        </div>
+                        <div className="flex-[2]">
+                          <label className="block text-[11px] font-bold text-gray-500 mb-1">数量</label>
+                          <div className="relative">
+                            <input
+                              type="number"
+                              value={can18}
+                              onChange={(e) => setCan18(e.target.value)}
+                              onFocus={handleFocus}
+                              className="w-full pl-2 pr-6 py-2 bg-blue-50 border border-blue-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-right font-bold text-blue-700 text-lg"
+                              placeholder="0"
+                            />
+                            <span className="absolute right-2 top-1/2 -translate-y-1/2 text-blue-500 text-xs">缶</span>
+                          </div>
                         </div>
                       </div>
-                      <div className="flex-1">
-                        <label className="block text-xs font-bold text-gray-600 mb-1 text-center">20L 缶</label>
-                        <div className="relative">
-                          <input
-                            type="number"
-                            value={can20}
-                            onChange={(e) => setCan20(e.target.value)}
-                            onFocus={handleFocus}
-                            className="w-full pl-3 pr-8 py-3 bg-white border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all text-center text-lg font-bold text-blue-700"
-                            placeholder="0"
-                          />
-                          <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">缶</span>
+                    </div>
+
+                    {/* 20L缶ブロック */}
+                    <div className="bg-white p-3 rounded-xl border border-blue-200 shadow-sm">
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="font-bold text-blue-800">20L 缶</span>
+                      </div>
+                      <div className="flex gap-2">
+                        <div className="flex-[3]">
+                          <label className="block text-[11px] font-bold text-gray-500 mb-1">1缶の単価 (税込)</label>
+                          <div className="relative">
+                            <input
+                              type="number"
+                              value={priceCan20}
+                              onChange={(e) => setPriceCan20(e.target.value)}
+                              onFocus={handleFocus}
+                              className="w-full pl-2 pr-6 py-2 bg-gray-50 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-right font-medium"
+                              placeholder="0"
+                            />
+                            <span className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 text-xs">円</span>
+                          </div>
+                        </div>
+                        <div className="flex-[2]">
+                          <label className="block text-[11px] font-bold text-gray-500 mb-1">数量</label>
+                          <div className="relative">
+                            <input
+                              type="number"
+                              value={can20}
+                              onChange={(e) => setCan20(e.target.value)}
+                              onFocus={handleFocus}
+                              className="w-full pl-2 pr-6 py-2 bg-blue-50 border border-blue-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-right font-bold text-blue-700 text-lg"
+                              placeholder="0"
+                            />
+                            <span className="absolute right-2 top-1/2 -translate-y-1/2 text-blue-500 text-xs">缶</span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* その他（リットル指定）ブロック */}
+                    <div className="bg-white p-3 rounded-xl border border-blue-200 shadow-sm relative overflow-hidden">
+                      <div className="absolute top-0 left-0 w-1 h-full bg-blue-400"></div>
+                      <div className="flex items-center justify-between mb-2 pl-2">
+                        <span className="font-bold text-blue-800">その他給油 <span className="text-[10px] text-gray-500 font-normal">(タンク・端数分)</span></span>
+                      </div>
+                      <div className="flex gap-2 pl-2">
+                        <div className="flex-[3]">
+                          <label className="block text-[11px] font-bold text-gray-500 mb-1">指定リットル数</label>
+                          <div className="relative">
+                            <input
+                              type="number"
+                              value={otherVolume}
+                              onChange={(e) => setOtherVolume(e.target.value)}
+                              onFocus={handleFocus}
+                              className="w-full pl-2 pr-6 py-2 bg-blue-50 border border-blue-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-right font-bold text-blue-700 text-lg"
+                              placeholder="0"
+                              step="0.1"
+                            />
+                            <span className="absolute right-2 top-1/2 -translate-y-1/2 text-blue-500 text-xs">L</span>
+                          </div>
+                        </div>
+                        <div className="flex-[2] flex flex-col justify-end pb-1 items-end pr-1">
+                          <span className="text-[10px] text-gray-400 mb-0.5">加算額 (1L換算)</span>
+                          <span className="font-bold text-gray-700">
+                            +¥{Math.round((parseFloat(displayUnitPriceL) || 0) * (parseFloat(otherVolume) || 0)).toLocaleString()}
+                          </span>
                         </div>
                       </div>
                     </div>
@@ -278,24 +409,8 @@
                         <span>合計給油量</span>
                       </div>
                       <div className="text-xl font-black text-blue-600">
-                        {result.calculatedVolume} <span className="text-sm font-medium text-blue-400">L</span>
+                        {Math.round(result.calculatedVolume * 10) / 10} <span className="text-sm font-medium text-blue-400">L</span>
                       </div>
-                    </div>
-                  </div>
-                ) : (
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-1">給油量 (リットル)</label>
-                    <div className="relative">
-                      <input
-                        type="number"
-                        value={volume}
-                        onChange={(e) => setVolume(e.target.value)}
-                        onFocus={handleFocus}
-                        className="w-full pl-4 pr-12 py-3 bg-gray-50 border border-gray-300 rounded-xl focus:ring-2 focus:ring-red-500 focus:border-red-500 outline-none transition-all text-lg font-medium"
-                        placeholder="0"
-                        step="0.1"
-                      />
-                      <span className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 font-medium">L</span>
                     </div>
                   </div>
                 )}
@@ -393,7 +508,7 @@
               {fuelType === 'polycan' && (
                 <div className="flex gap-2 text-xs text-blue-600 bg-blue-50 p-3 rounded-lg mt-6 border border-blue-100">
                   <div className="shrink-0 text-blue-500"><InfoIcon /></div>
-                  <p>灯油の小口配達モードです。18L缶と20L缶の数量を入力するだけで、総リットル数と合計金額を自動計算します。</p>
+                  <p>18L缶の単価を基準に1Lあたりの単価と20L缶の単価を自動計算します。タンクへの直接給油などは「その他給油」にリットル数を入力してください。</p>
                 </div>
               )}
 
@@ -433,5 +548,6 @@
   </script>
 </body>
 </html>
+
 
 ```
