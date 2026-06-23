@@ -82,7 +82,7 @@
     .p-4 { padding: 1rem; }
     .container-grid { display: flex; flex-wrap: wrap; gap: 0.5rem; }
     .container-item { width: calc(50% - 0.25rem); position: relative; }
-    .container-input { width: 100%; padding: 0.625rem 0.5rem 0.625rem 2.75rem; border: 1px solid #d1d5db; border-radius: 0.5rem; font-size: 1rem; font-weight: 600; color: #1f2937; outline: none; background: #ffffff; transition: all 0.15s; }
+    .container-input { width: 100%; padding: 0.625rem 0.5rem 0.625rem 3rem; border: 1px solid #d1d5db; border-radius: 0.5rem; font-size: 1rem; font-weight: 600; color: #1f2937; outline: none; background: #ffffff; transition: all 0.15s; }
     .container-input:focus { border-color: #dc2626; box-shadow: 0 0 0 2px rgba(220, 38, 38, 0.2); }
     .container-label { position: absolute; left: 0.5rem; top: 50%; transform: translateY(-50%); font-size: 0.875rem; font-weight: 700; color: #4b5563; }
     .container-unit { position: absolute; right: 0.5rem; top: 50%; transform: translateY(-50%); font-size: 0.75rem; color: #9ca3af; font-weight: bold; pointer-events: none;}
@@ -176,7 +176,7 @@
           軽油 (免税)
         </button>
         <button id="tab-other" class="flex-1 rounded-lg transition-all tab-btn inactive" onclick="setFuel('other')">
-          重油　ガソリン等
+          重油等
         </button>
         <button id="tab-kerosene" class="flex-1 rounded-lg transition-all tab-btn inactive" onclick="setFuel('kerosene')">
           灯油 (容器)
@@ -186,7 +186,7 @@
       <div class="space-y-4">
         
         <div id="poly-can-group" style="display: none;" class="p-4 bg-gray-100 rounded-xl border border-gray-200">
-          <label class="block text-sm font-semibold text-gray-700 mb-2">容器の内訳 (個数)</label>
+          <label class="block text-sm font-semibold text-gray-700 mb-2">容器の内訳 (個数/追加分)</label>
           <div class="container-grid">
             <div class="container-item">
               <span class="container-label">18L</span>
@@ -199,17 +199,17 @@
               <span class="container-unit">缶</span>
             </div>
             <div class="container-item">
-              <span class="container-label">10L</span>
-              <input type="number" id="can-10" class="container-input" value="0" step="0.5" min="0" oninput="calculateFromCan()" onfocus="this.select()">
-              <span class="container-unit">缶</span>
+              <span class="container-label">200L</span>
+              <input type="number" id="can-200" class="container-input" value="0" step="0.5" min="0" oninput="calculateFromCan()" onfocus="this.select()">
+              <span class="container-unit">本</span>
             </div>
             <div class="container-item">
-              <span class="container-label">5L</span>
-              <input type="number" id="can-5" class="container-input" value="0" step="0.5" min="0" oninput="calculateFromCan()" onfocus="this.select()">
-              <span class="container-unit">缶</span>
+              <span class="container-label">端数</span>
+              <input type="number" id="can-fraction" class="container-input" value="0" step="0.1" min="0" oninput="calculateFromCan()" onfocus="this.select()">
+              <span class="container-unit">L</span>
             </div>
           </div>
-          <p class="text-xs text-gray-500 mt-2 font-medium">※入力した個数に応じて、下の「給油量(L)」が自動で合算されます。</p>
+          <p class="text-xs text-gray-500 mt-2 font-medium">※入力した個数と端数が合算され、下の「給油量(L)」に自動反映されます。</p>
         </div>
 
         <div>
@@ -359,8 +359,8 @@
         // 灯油タブを開いた時の初期化
         document.getElementById('can-18').value = '1';
         document.getElementById('can-20').value = '0';
-        document.getElementById('can-10').value = '0';
-        document.getElementById('can-5').value = '0';
+        document.getElementById('can-200').value = '0';
+        document.getElementById('can-fraction').value = '0';
         volumeInput.value = '18';
       }
       calculate();
@@ -370,11 +370,11 @@
       // 各容器の個数を取得。未入力・文字の場合は0として扱う
       const c18 = parseFloat(document.getElementById('can-18').value) || 0;
       const c20 = parseFloat(document.getElementById('can-20').value) || 0;
-      const c10 = parseFloat(document.getElementById('can-10').value) || 0;
-      const c5  = parseFloat(document.getElementById('can-5').value) || 0;
+      const c200 = parseFloat(document.getElementById('can-200').value) || 0;
+      const frac  = parseFloat(document.getElementById('can-fraction').value) || 0;
       
       // 合算計算（端数のズレを防ぐため小数第1位で丸める）
-      const totalVolume = Math.round(((c18 * 18) + (c20 * 20) + (c10 * 10) + (c5 * 5)) * 10) / 10;
+      const totalVolume = Math.round(((c18 * 18) + (c20 * 20) + (c200 * 200) + frac) * 10) / 10;
       document.getElementById('volume').value = totalVolume.toString();
       
       calculate();
