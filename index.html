@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>総合燃料費シミュレーター | ㈱中野油業</title>
   <style>
-    /* 外部サーバーに依存しない完全独立CSS */
+    /* 外部通信を一切行わない完全独立CSS */
     * { box-sizing: border-box; }
     body { background-color: #f3f4f6; font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; color: #1f2937; padding: 1rem; margin: 0; }
     @media (min-width: 768px) { body { padding: 2rem; } }
@@ -73,25 +73,21 @@
     
     .absolute { position: absolute; }
     .right-4 { right: 1rem; }
-    .right-3 { right: 0.75rem; }
     .top-1/2 { top: 50%; }
     .-translate-y-1/2 { transform: translateY(-50%); }
     .text-gray-500 { color: #6b7280; }
     .font-medium { font-weight: 500; }
     
-    /* 容器選択エリア */
+    /* 容器選択エリア（グリッド型） */
     .p-4 { padding: 1rem; }
-    .gap-2 { gap: 0.5rem; }
-    .flex-1 { flex: 1 1 0%; }
-    .w-24 { width: 6rem; }
-    .shrink-0 { flex-shrink: 0; }
+    .container-grid { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+    .container-item { width: calc(50% - 0.25rem); position: relative; }
+    .container-input { width: 100%; padding: 0.625rem 0.5rem 0.625rem 2.75rem; border: 1px solid #d1d5db; border-radius: 0.5rem; font-size: 1rem; font-weight: 600; color: #1f2937; outline: none; background: #ffffff; transition: all 0.15s; }
+    .container-input:focus { border-color: #dc2626; box-shadow: 0 0 0 2px rgba(220, 38, 38, 0.2); }
+    .container-label { position: absolute; left: 0.5rem; top: 50%; transform: translateY(-50%); font-size: 0.875rem; font-weight: 700; color: #4b5563; }
+    .container-unit { position: absolute; right: 0.5rem; top: 50%; transform: translateY(-50%); font-size: 0.75rem; color: #9ca3af; font-weight: bold; pointer-events: none;}
     .text-xs { font-size: 0.75rem; line-height: 1rem; }
     .mt-2 { margin-top: 0.5rem; }
-    
-    .container-select { appearance: none; width: 100%; padding: 0.625rem 2rem 0.625rem 0.75rem; border: 1px solid #d1d5db; border-radius: 0.5rem; font-size: 0.875rem; font-weight: 600; color: #374151; outline: none; background: #ffffff url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e") no-repeat right 0.5rem center/1.5em 1.5em; transition: all 0.15s; }
-    .container-select:focus { border-color: #dc2626; box-shadow: 0 0 0 2px rgba(220, 38, 38, 0.2); }
-    .container-input { width: 100%; padding: 0.625rem 1.5rem 0.625rem 0.5rem; border: 1px solid #d1d5db; border-radius: 0.5rem; font-size: 1rem; font-weight: 600; color: #1f2937; outline: none; background: #ffffff; transition: all 0.15s; text-align: right;}
-    .container-input:focus { border-color: #dc2626; box-shadow: 0 0 0 2px rgba(220, 38, 38, 0.2); }
     
     /* 計算結果セクション */
     .bg-gray-50 { background-color: #f9fafb; }
@@ -99,6 +95,7 @@
     .mt-6 { margin-top: 1.5rem; }
     .shadow-sm { box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05); }
     .items-center { align-items: center; }
+    .gap-2 { gap: 0.5rem; }
     .mb-4 { margin-bottom: 1rem; }
     .text-gray-800 { color: #1f2937; }
     .text-lg { font-size: 1.125rem; line-height: 1.75rem; }
@@ -189,21 +186,30 @@
       <div class="space-y-4">
         
         <div id="poly-can-group" style="display: none;" class="p-4 bg-gray-100 rounded-xl border border-gray-200">
-          <label class="block text-sm font-semibold text-gray-700 mb-2">容器の種類と数量</label>
-          <div class="flex gap-2">
-            <div class="flex-1">
-              <select id="container-size" class="container-select" onchange="calculateFromCan()">
-                <option value="18">18L ポリ缶</option>
-                <option value="20">20L ポリ缶</option>
-                <option value="200">200L ドラム缶</option>
-              </select>
+          <label class="block text-sm font-semibold text-gray-700 mb-2">容器の内訳 (個数)</label>
+          <div class="container-grid">
+            <div class="container-item">
+              <span class="container-label">18L</span>
+              <input type="number" id="can-18" class="container-input" value="1" step="0.5" min="0" oninput="calculateFromCan()" onfocus="this.select()">
+              <span class="container-unit">缶</span>
             </div>
-            <div class="relative w-24 shrink-0">
-              <input type="number" id="can-count" class="container-input" value="1" step="0.1" oninput="calculateFromCan()" onfocus="this.select()">
-              <span class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 font-medium text-sm">個</span>
+            <div class="container-item">
+              <span class="container-label">20L</span>
+              <input type="number" id="can-20" class="container-input" value="0" step="0.5" min="0" oninput="calculateFromCan()" onfocus="this.select()">
+              <span class="container-unit">缶</span>
+            </div>
+            <div class="container-item">
+              <span class="container-label">10L</span>
+              <input type="number" id="can-10" class="container-input" value="0" step="0.5" min="0" oninput="calculateFromCan()" onfocus="this.select()">
+              <span class="container-unit">缶</span>
+            </div>
+            <div class="container-item">
+              <span class="container-label">5L</span>
+              <input type="number" id="can-5" class="container-input" value="0" step="0.5" min="0" oninput="calculateFromCan()" onfocus="this.select()">
+              <span class="container-unit">缶</span>
             </div>
           </div>
-          <p class="text-xs text-gray-500 mt-2 font-medium">※端数やその他の量の場合は、下の「給油量(L)」を直接入力してください。</p>
+          <p class="text-xs text-gray-500 mt-2 font-medium">※入力した個数に応じて、下の「給油量(L)」が自動で合算されます。</p>
         </div>
 
         <div>
@@ -349,24 +355,28 @@
         dieselTaxRow.style.display = 'none';
         dieselAlert.style.display = 'none';
         polyCanGroup.style.display = 'block';
-        document.getElementById('can-count').value = '1';
+        
+        // 灯油タブを開いた時の初期化
+        document.getElementById('can-18').value = '1';
+        document.getElementById('can-20').value = '0';
+        document.getElementById('can-10').value = '0';
+        document.getElementById('can-5').value = '0';
         volumeInput.value = '18';
       }
       calculate();
     }
 
     function calculateFromCan() {
-      const size = parseFloat(document.getElementById('container-size').value);
-      const count = parseFloat(document.getElementById('can-count').value);
-      const volumeInput = document.getElementById('volume');
+      // 各容器の個数を取得。未入力・文字の場合は0として扱う
+      const c18 = parseFloat(document.getElementById('can-18').value) || 0;
+      const c20 = parseFloat(document.getElementById('can-20').value) || 0;
+      const c10 = parseFloat(document.getElementById('can-10').value) || 0;
+      const c5  = parseFloat(document.getElementById('can-5').value) || 0;
       
-      if (isNaN(size) || isNaN(count) || count < 0) {
-        volumeInput.value = '0';
-      } else {
-        // 端数計算のズレを防ぐため小数第1位で丸める
-        const totalVolume = Math.round((size * count) * 10) / 10;
-        volumeInput.value = totalVolume.toString();
-      }
+      // 合算計算（端数のズレを防ぐため小数第1位で丸める）
+      const totalVolume = Math.round(((c18 * 18) + (c20 * 20) + (c10 * 10) + (c5 * 5)) * 10) / 10;
+      document.getElementById('volume').value = totalVolume.toString();
+      
       calculate();
     }
 
