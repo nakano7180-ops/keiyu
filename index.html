@@ -1,550 +1,389 @@
-
 <!DOCTYPE html>
 <html lang="ja">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>総合燃料費計算 | ㈱中野油業</title>
-  <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
-  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
-  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-  <script src="https://cdn.tailwindcss.com"></script>
+  <title>総合燃料費シミュレーター | ㈱中野油業</title>
   <style>
-    .logo-font {
-      font-family: "MS Gothic", "Hiragino Sans", "Courier New", monospace;
-    }
+    /* 外部サーバーに依存しない、Tailwind CSSデザインの完全再現 */
+    * { box-sizing: border-box; }
+    body { background-color: #f3f4f6; font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; color: #1f2937; padding: 1rem; margin: 0; }
+    @media (min-width: 768px) { body { padding: 2rem; } }
+    
+    .logo-font { font-family: "MS Gothic", "Hiragino Sans", "Courier New", monospace; }
+    
+    /* スピンボタン（上下の矢印）を非表示にする設定 */
     input[type="number"]::-webkit-outer-spin-button,
-    input[type="number"]::-webkit-inner-spin-button {
-      -webkit-appearance: none;
-      margin: 0;
-    }
-    input[type="number"] {
-      -moz-appearance: textfield;
+    input[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+    input[type="number"] { -moz-appearance: textfield; }
+
+    .max-w-md { max-width: 28rem; margin-left: auto; margin-right: auto; }
+    .bg-white { background-color: #ffffff; }
+    .rounded-2xl { border-radius: 1rem; }
+    .shadow-xl { box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04); }
+    .overflow-hidden { overflow: hidden; }
+    .border { border-width: 1px; border-style: solid; }
+    .border-gray-200 { border-color: #e5e7eb; }
+    
+    /* ヘッダー */
+    .bg-gray-900 { background-color: #111827; }
+    .p-6 { padding: 1.5rem; }
+    .text-white { color: #ffffff; }
+    .text-center { text-align: center; }
+    .border-b-4 { border-bottom-width: 4px; }
+    .border-red-600 { border-bottom-color: #dc2626; }
+    
+    .flex { display: flex; }
+    .justify-center { justify-content: center; }
+    .mb-3 { margin-bottom: 0.75rem; }
+    .text-red-500 { color: #ef4444; }
+    .text-2xl { font-size: 1.5rem; line-height: 2rem; }
+    .font-bold { font-weight: 700; }
+    .tracking-tight { letter-spacing: -0.025em; }
+    .text-gray-400 { color: #9ca3af; }
+    .mt-1 { margin-top: 0.25rem; }
+    .text-sm { font-size: 0.875rem; line-height: 1.25rem; }
+    .font-mono { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; }
+    
+    .space-y-6 > * + * { margin-top: 1.5rem; }
+    .space-y-4 > * + * { margin-top: 1rem; }
+    .space-y-3 > * + * { margin-top: 0.75rem; }
+    .space-y-2 > * + * { margin-top: 0.5rem; }
+    
+    /* タブ */
+    .bg-gray-100 { background-color: #f3f4f6; }
+    .rounded-xl { border-radius: 0.75rem; }
+    .p-1 { padding: 0.25rem; }
+    .flex-1 { flex: 1 1 0%; }
+    .py-2px5 { padding-top: 0.625rem; padding-bottom: 0.625rem; }
+    .transition-all { transition-property: all; transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1); transition-duration: 150ms; }
+    
+    .tab-btn { border: 1px solid transparent; background: none; cursor: pointer; width: 100%; text-align: center; font-size: 0.875rem; line-height: 1.25rem; }
+    .tab-btn.active { background-color: #ffffff; box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1); color: #dc2626; border-color: #e5e7eb; border-radius: 0.5rem; font-weight: 700; }
+    .tab-btn.inactive { color: #6b7280; font-weight: 700; }
+    .tab-btn.inactive:hover { color: #374151; }
+    
+    /* 入力エリア */
+    .block { display: block; }
+    .font-semibold { font-weight: 600; }
+    .text-gray-700 { color: #374151; }
+    .mb-1 { margin-bottom: 0.25rem; }
+    .relative { position: relative; }
+    
+    .input-field { width: 100%; padding-left: 1rem; padding-right: 3rem; padding-top: 0.75rem; padding-bottom: 0.75rem; background-color: #f9fafb; border: 1px solid #d1d5db; border-radius: 0.75rem; font-size: 1.125rem; line-height: 1.75rem; font-weight: 500; outline: none; transition: all 0.15s; }
+    .input-field:focus { border-color: #dc2626; box-shadow: 0 0 0 2px rgba(220, 38, 38, 0.2); background-color: #ffffff; }
+    
+    .price-input-wrapper .input-field { padding-right: 4rem; }
+    
+    .absolute { position: absolute; }
+    .right-4 { right: 1rem; }
+    .top-1/2 { top: 50%; }
+    .-translate-y-1/2 { transform: translateY(-50%); }
+    .text-gray-500 { color: #6b7280; }
+    .font-medium { font-weight: 500; }
+    
+    /* 計算結果セクション */
+    .bg-gray-50 { background-color: #f9fafb; }
+    .p-5 { padding: 1.25rem; }
+    .mt-6 { margin-top: 1.5rem; }
+    .shadow-sm { box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05); }
+    .items-center { align-items: center; }
+    .gap-2 { gap: 0.5rem; }
+    .mb-4 { margin-bottom: 1rem; }
+    .text-gray-800 { color: #1f2937; }
+    .text-lg { font-size: 1.125rem; line-height: 1.75rem; }
+    .justify-between { justify-content: space-between; }
+    .items-end { align-items: flex-end; }
+    .border-b { border-bottom-width: 1px; border-bottom-style: solid; }
+    .border-gray-300 { border-color: #d1d5db; }
+    .pb-3 { padding-bottom: 0.75rem; }
+    .text-gray-600 { color: #4b5563; }
+    .text-3xl { font-size: 1.875rem; line-height: 2.25rem; }
+    .text-gray-900 { color: #111827; }
+    .pt-2 { padding-top: 0.5rem; }
+    
+    .diesel-tax-box { background-color: #ffffff; padding: 0.5rem; border-radius: 0.5rem; border: 1px solid #e5e7eb; margin-top: 0.5rem; font-weight: 700; color: #1f2937; }
+    .text-red-600 { color: #dc2626; }
+    
+    /* お釣り計算セクション */
+    .bg-amber-50 { background-color: #fffbeb; }
+    .border-amber-200 { border-color: #fde68a; }
+    .mt-4 { margin-top: 1rem; }
+    .text-amber-800 { color: #92400e; }
+    
+    .input-field-amber { background-color: #ffffff; border-color: #fcd34d; width: 100%; padding-left: 1rem; padding-right: 3rem; padding-top: 0.75rem; padding-bottom: 0.75rem; border-radius: 0.75rem; font-size: 1.125rem; line-height: 1.75rem; font-weight: 500; outline: none; transition: all 0.15s; }
+    .input-field-amber:focus { border-color: #b45309; box-shadow: 0 0 0 2px rgba(180, 83, 9, 0.2); }
+    
+    .border-t { border-top-width: 1px; border-top-style: solid; }
+    .pt-4 { padding-top: 1rem; }
+    .mt-2 { margin-top: 0.5rem; }
+    .text-amber-700 { color: #b45309; }
+    
+    /* 値下げ額アラート */
+    .bg-red-50 { background-color: #fef2f2; }
+    .border-red-100 { border-color: #fee2e2; }
+    .gap-3 { gap: 0.75rem; }
+    .shrink-0 { flex-shrink: 0; }
+    .mt-0px5 { margin-top: 0.125rem; }
+    .text-red-800 { color: #991b1b; }
+    .text-2xl { font-size: 1.5rem; line-height: 2rem; }
+    .font-black { font-weight: 900; }
+    .text-xs { font-size: 0.75rem; line-height: 1rem; }
+    .text-red-700 { color: #b91c1c; }
+    
+    /* フッター */
+    .mt-8 { margin-top: 2rem; }
+    .bg-black { background-color: #000000; }
+    .rounded-xl-footer { border-radius: 0.75rem; }
+    .shadow-inner { box-shadow: inset 0 2px 4px 0 rgba(0, 0, 0, 0.06); }
+    .border-gray-800 { border-color: #1f2937; }
+    .flex-col { flex-direction: column; }
+    .w-full { width: 100%; }
+    
+    .tracking-logo { letter-spacing: 0.1em; }
+    .mx-0px5 { margin-left: 0.125rem; margin-right: 0.125rem; }
+    .h-10 { height: 2.5rem; }
+    .flex-grow { flex-grow: 1; }
+    .border-t-3 { border-top-width: 3px; border-top-style: solid; }
+    .border-white { border-top-color: #ffffff; }
+    .mt-14px { margin-top: 14px; }
+    .ml-2 { margin-left: 0.5rem; }
+    .w-36px { width: 36px; }
+    .h-full { height: 100%; }
+    .drop-shadow-md { filter: drop-shadow(0 4px 3px rgba(0, 0, 0, 0.07)) drop-shadow(0 2px 2px rgba(0, 0, 0, 0.06)); }
+    
+    .text-footer-sub { color: #ffffff; font-size: 11px; letter-spacing: 0.25em; margin-top: 0.25rem; font-family: monospace; }
+    @media (min-width: 640px) {
+      .text-3xl-sm { font-size: 2.25rem; line-height: 2.5rem; }
+      .text-xs-sm { font-size: 0.75rem; line-height: 1rem; }
     }
   </style>
 </head>
-<body class="bg-gray-100">
-  <div id="root"></div>
+<body>
 
-  <script type="text/babel">
-    const { useState, useEffect } = React;
+  <div class="max-w-md bg-white rounded-2xl shadow-xl overflow-hidden border border-gray-200">
+    
+    <div class="bg-gray-900 p-6 text-white text-center border-b-4 border-red-600">
+      <div class="flex justify-center mb-3 text-red-500">
+        <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="22" x2="21" y2="22"></line><line x1="4" y1="9" x2="14" y2="9"></line><path d="M14 22V4a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v18"></path><path d="M14 13h2a2 2 0 0 1 2 2v2a2 2 0 0 0 2 2h0a2 2 0 0 0 2-2V9.83a2 2 0 0 0-.59-1.42L18 5"></path></svg>
+      </div>
+      <h1 class="text-2xl font-bold tracking-tight">総合燃料費シミュレーター</h1>
+      <p class="text-gray-400 mt-1 text-sm font-mono">Ver. 2026 / ㈱中野油業</p>
+    </div>
 
-    const FuelIcon = () => (
-      <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="3" y1="22" x2="21" y2="22"></line><line x1="4" y1="9" x2="14" y2="9"></line><path d="M14 22V4a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v18"></path><path d="M14 13h2a2 2 0 0 1 2 2v2a2 2 0 0 0 2 2h0a2 2 0 0 0 2-2V9.83a2 2 0 0 0-.59-1.42L18 5"></path></svg>
-    );
-    const CalculatorIcon = () => (
-      <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="4" y="2" width="16" height="20" rx="2" ry="2"></rect><line x1="8" y1="6" x2="16" y2="6"></line><line x1="16" y1="14" x2="16" y2="18"></line><path d="M16 10h.01"></path><path d="M12 10h.01"></path><path d="M8 10h.01"></path><path d="M12 14h.01"></path><path d="M8 14h.01"></path><path d="M12 18h.01"></path><path d="M8 18h.01"></path></svg>
-    );
-    const TrendingDownIcon = () => (
-      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="22 17 13.5 8.5 8.5 13.5 2 7"></polyline><polyline points="16 17 22 17 22 11"></polyline></svg>
-    );
-    const InfoIcon = () => (
-      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
-    );
-    const BanknoteIcon = () => (
-      <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="6" width="20" height="12" rx="2"></rect><circle cx="12" cy="12" r="2"></circle><path d="M6 12h.01M18 12h.01"></path></svg>
-    );
-    const DropletIcon = () => (
-      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"></path></svg>
-    );
-
-    function App() {
-      const [fuelType, setFuelType] = useState('diesel'); 
-      const [volume, setVolume] = useState('50');
-      const [pricePerLiter, setPricePerLiter] = useState('130');
+    <div class="p-6 space-y-6">
       
-      // ポリ缶配達用のステート
-      const [priceCan18, setPriceCan18] = useState('2000');
-      const [priceCan20, setPriceCan20] = useState('2222');
-      const [can18, setCan18] = useState('');
-      const [can20, setCan20] = useState('');
-      const [otherVolume, setOtherVolume] = useState(''); // その他のリットル数
-      
-      const [receivedAmount, setReceivedAmount] = useState('');
-      
-      const [result, setResult] = useState({
-        totalAmount: 0,
-        basePriceTotal: 0,
-        taxAmount: 0,
-        consumptionTaxTotal: 0,
-        savedAmount: 0,
-        calculatedVolume: 0,
-      });
+      <div class="flex bg-gray-100 rounded-xl p-1 border border-gray-200">
+        <button id="tab-diesel" class="flex-1 py-2px5 text-sm font-bold rounded-lg transition-all tab-btn active" onclick="setFuel('diesel')">
+          軽油 (免税計算)
+        </button>
+        <button id="tab-other" class="flex-1 py-2px5 text-sm font-bold rounded-lg transition-all tab-btn inactive" onclick="setFuel('other')">
+          その他 (ガソリン等)
+        </button>
+      </div>
 
-      const NEW_TAX_RATE = 15.0; 
-      const OLD_TAX_RATE = 32.1; 
-      const CONSUMPTION_TAX_RATE = 0.10; 
+      <div class="space-y-4">
+        <div>
+          <label class="block text-sm font-semibold text-gray-700 mb-1">給油量 (リットル)</label>
+          <div class="relative">
+            <input type="number" id="volume" class="input-field" value="50" step="0.1" placeholder="0" oninput="calculate()" onfocus="this.select()">
+            <span class="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 font-medium">L</span>
+          </div>
+        </div>
 
-      useEffect(() => {
-        calculate();
-      }, [volume, pricePerLiter, fuelType, can18, can20, otherVolume, priceCan18, priceCan20]);
+        <div>
+          <label class="block text-sm font-semibold text-gray-700 mb-1">店頭表示単価 (税込)</label>
+          <div class="relative price-input-wrapper">
+            <input type="number" id="pricePerLiter" class="input-field" value="130" step="0.1" placeholder="0" oninput="calculate()" onfocus="this.select()">
+            <span class="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 font-medium">円/L</span>
+          </div>
+        </div>
+      </div>
 
-      // 18L缶の単価入力ハンドラー（20Lを自動計算）
-      const handlePriceCan18Change = (e) => {
-        const val = e.target.value;
-        setPriceCan18(val);
-        
-        const p18 = parseInt(val, 10);
-        if (!isNaN(p18) && p18 > 0) {
-          const calculated20 = Math.round((p18 / 18) * 20);
-          setPriceCan20(calculated20.toString());
-        } else {
-          setPriceCan20('');
-        }
-      };
+      <div class="bg-gray-50 rounded-xl p-5 border border-gray-200 mt-6 shadow-sm">
+        <div class="flex items-center gap-2 mb-4 text-gray-800">
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="2" width="16" height="20" rx="2" ry="2"></rect><line x1="8" y1="6" x2="16" y2="6"></line><line x1="16" y1="14" x2="16" y2="18"></line><path d="M16 10h.01"></path><path d="M12 10h.01"></path><path d="M8 10h.01"></path><path d="M12 14h.01"></path><path d="M8 14h.01"></path><path d="M12 18h.01"></path><path d="M8 18h.01"></path></svg>
+          <h2 class="font-bold text-lg">計算結果</h2>
+        </div>
 
-      const calculate = () => {
-        let v = 0;
-        let totalAmount = 0;
+        <div class="space-y-3">
+          <div class="flex justify-between items-end border-b border-gray-300 pb-3">
+            <span class="text-gray-600 font-medium">支払総額</span>
+            <span id="total-amount" class="text-3xl font-bold text-gray-900">¥0</span>
+          </div>
 
-        // ポリ缶配達モードの計算
-        if (fuelType === 'polycan') {
-          const c18 = parseInt(can18, 10) || 0;
-          const c20 = parseInt(can20, 10) || 0;
-          const oVol = parseFloat(otherVolume) || 0;
-          const p18 = parseInt(priceCan18, 10) || 0;
-          const p20 = parseInt(priceCan20, 10) || 0;
-          
-          const unitPriceL = p18 / 18; // 1Lあたりの単価
-          
-          v = (c18 * 18) + (c20 * 20) + oVol;
-          totalAmount = (c18 * p18) + (c20 * p20) + Math.round(unitPriceL * oVol);
-          
-          if (v <= 0) {
-            resetResult();
-            return;
-          }
-
-          // 内税計算（総額から消費税を割り戻す）
-          const basePriceTotal = totalAmount / (1 + CONSUMPTION_TAX_RATE);
-          const consumptionTaxTotal = totalAmount - basePriceTotal;
-
-          setResult({
-            totalAmount: Math.round(totalAmount),
-            basePriceTotal: Math.round(basePriceTotal),
-            taxAmount: 0,
-            consumptionTaxTotal: Math.round(consumptionTaxTotal),
-            savedAmount: 0,
-            calculatedVolume: v,
-          });
-          return;
-        }
-
-        // 一般軽油・その他の計算
-        const p = parseFloat(pricePerLiter);
-        if (isNaN(p) || p <= 0) {
-          resetResult();
-          return;
-        }
-
-        v = parseFloat(volume);
-        if (isNaN(v) || v <= 0) {
-          resetResult();
-          return;
-        }
-
-        totalAmount = p * v;
-
-        if (fuelType === 'diesel') {
-          const taxAmount = v * NEW_TAX_RATE;
-          const basePricePerLiter = (p - NEW_TAX_RATE) / (1 + CONSUMPTION_TAX_RATE);
-          const basePriceTotal = basePricePerLiter * v;
-          const consumptionTaxTotal = basePriceTotal * CONSUMPTION_TAX_RATE;
-          const savedAmount = (OLD_TAX_RATE - NEW_TAX_RATE) * v;
-
-          setResult({
-            totalAmount: Math.round(totalAmount),
-            basePriceTotal: Math.round(basePriceTotal),
-            taxAmount: Math.round(taxAmount),
-            consumptionTaxTotal: Math.round(consumptionTaxTotal),
-            savedAmount: Math.round(savedAmount),
-            calculatedVolume: v,
-          });
-        } else {
-          const basePriceTotal = totalAmount / (1 + CONSUMPTION_TAX_RATE);
-          const consumptionTaxTotal = totalAmount - basePriceTotal;
-
-          setResult({
-            totalAmount: Math.round(totalAmount),
-            basePriceTotal: Math.round(basePriceTotal),
-            taxAmount: 0,
-            consumptionTaxTotal: Math.round(consumptionTaxTotal),
-            savedAmount: 0,
-            calculatedVolume: v,
-          });
-        }
-      };
-
-      const resetResult = () => {
-        setResult({
-          totalAmount: 0, basePriceTotal: 0, taxAmount: 0, consumptionTaxTotal: 0, savedAmount: 0, calculatedVolume: 0
-        });
-      }
-
-      const parsedReceived = parseInt(receivedAmount, 10);
-      let changeAmount = 0;
-      let hasReceivedInput = false;
-
-      if (!isNaN(parsedReceived) && receivedAmount !== '') {
-        hasReceivedInput = true;
-        changeAmount = parsedReceived - result.totalAmount;
-      }
-
-      const handleFocus = (e) => e.target.select();
-
-      // 現在の1L単価を計算 (表示用)
-      const currentP18 = parseInt(priceCan18, 10);
-      const displayUnitPriceL = (!isNaN(currentP18) && currentP18 > 0) ? (currentP18 / 18).toFixed(1) : 0;
-
-      return (
-        <div className="min-h-screen p-2 md:p-8 font-sans text-gray-800">
-          <div className="max-w-md mx-auto bg-white rounded-2xl shadow-xl overflow-hidden border border-gray-200">
-            
-            {/* Header */}
-            <div className="bg-gray-900 p-5 sm:p-6 text-white text-center border-b-4 border-red-600">
-              <div className="flex justify-center mb-3 text-red-500">
-                <FuelIcon />
-              </div>
-              <h1 className="text-xl sm:text-2xl font-bold tracking-tight">総合燃料費シミュレーター</h1>
-              <p className="text-gray-400 mt-1 text-xs sm:text-sm font-mono">Ver. 2026 / ㈱中野油業</p>
+          <div class="space-y-2 pt-2 text-sm">
+            <div class="flex justify-between items-center text-gray-600">
+              <span>本体価格 (税抜)</span>
+              <span id="base-price-total" class="font-medium">¥0</span>
             </div>
-
-            <div className="p-4 sm:p-6 space-y-6">
-              
-              {/* 油種切り替えタブ */}
-              <div className="flex bg-gray-100 rounded-xl p-1 border border-gray-200 shadow-inner">
-                <button
-                  className={`flex-1 flex flex-col items-center justify-center py-2 px-1 text-[10px] sm:text-xs font-bold rounded-lg transition-all leading-tight ${
-                    fuelType === 'diesel' 
-                      ? 'bg-white shadow text-red-600 border border-gray-200' 
-                      : 'text-gray-500 hover:text-gray-700'
-                  }`}
-                  onClick={() => setFuelType('diesel')}
-                >
-                  <span>一般軽油</span>
-                  <span>(軽油税)</span>
-                </button>
-                <button
-                  className={`flex-1 flex flex-col items-center justify-center py-2 px-1 text-[10px] sm:text-xs font-bold rounded-lg transition-all leading-tight ${
-                    fuelType === 'other' 
-                      ? 'bg-white shadow text-red-600 border border-gray-200' 
-                      : 'text-gray-500 hover:text-gray-700'
-                  }`}
-                  onClick={() => setFuelType('other')}
-                >
-                  <span>免税・重油</span>
-                  <span>ガソリン等</span>
-                </button>
-                <button
-                  className={`flex-1 flex flex-col items-center justify-center py-2 px-1 text-[10px] sm:text-xs font-bold rounded-lg transition-all leading-tight ${
-                    fuelType === 'polycan' 
-                      ? 'bg-white shadow text-red-600 border border-gray-200' 
-                      : 'text-gray-500 hover:text-gray-700'
-                  }`}
-                  onClick={() => setFuelType('polycan')}
-                >
-                  <span>ポリ缶配達</span>
-                  <span>(缶単価)</span>
-                </button>
-              </div>
-
-              {/* Input Section */}
-              <div className="space-y-4">
-                
-                {/* 一般・その他の場合 */}
-                {fuelType !== 'polycan' && (
-                  <div className="space-y-4">
-                    <div>
-                      <label className="block text-sm font-semibold text-gray-700 mb-1">配送料込価格 (税込)</label>
-                      <div className="relative">
-                        <input
-                          type="number"
-                          value={pricePerLiter}
-                          onChange={(e) => setPricePerLiter(e.target.value)}
-                          onFocus={handleFocus}
-                          className="w-full pl-4 pr-16 py-3 bg-gray-50 border border-gray-300 rounded-xl focus:ring-2 focus:ring-red-500 focus:border-red-500 outline-none transition-all text-lg font-medium"
-                          placeholder="0"
-                          step="0.1"
-                        />
-                        <span className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 font-medium">円/L</span>
-                      </div>
-                    </div>
-                    <div>
-                      <label className="block text-sm font-semibold text-gray-700 mb-1">給油量 (リットル)</label>
-                      <div className="relative">
-                        <input
-                          type="number"
-                          value={volume}
-                          onChange={(e) => setVolume(e.target.value)}
-                          onFocus={handleFocus}
-                          className="w-full pl-4 pr-12 py-3 bg-gray-50 border border-gray-300 rounded-xl focus:ring-2 focus:ring-red-500 focus:border-red-500 outline-none transition-all text-lg font-medium"
-                          placeholder="0"
-                          step="0.1"
-                        />
-                        <span className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 font-medium">L</span>
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {/* ポリ缶配達の場合 */}
-                {fuelType === 'polycan' && (
-                  <div className="bg-blue-50/50 p-4 rounded-xl border border-blue-100 space-y-4">
-                    <div className="flex justify-between items-end mb-1">
-                      <label className="block text-sm font-semibold text-gray-700">単価と配達数</label>
-                      <div className="text-xs font-bold text-red-600 bg-red-50 px-2 py-1 rounded border border-red-100 shadow-sm">
-                        1L換算: 約 <span className="text-base">{displayUnitPriceL}</span> 円
-                      </div>
-                    </div>
-                    
-                    {/* 18L缶ブロック */}
-                    <div className="bg-white p-3 rounded-xl border border-blue-200 shadow-sm">
-                      <div className="flex items-center justify-between mb-2">
-                        <span className="font-bold text-blue-800">18L 缶 <span className="text-xs font-normal text-gray-500">(基準単価)</span></span>
-                      </div>
-                      <div className="flex gap-2">
-                        <div className="flex-[3]">
-                          <label className="block text-[11px] font-bold text-gray-500 mb-1">1缶の単価 (税込)</label>
-                          <div className="relative">
-                            <input
-                              type="number"
-                              value={priceCan18}
-                              onChange={handlePriceCan18Change}
-                              onFocus={handleFocus}
-                              className="w-full pl-2 pr-6 py-2 bg-gray-50 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-right font-medium"
-                              placeholder="0"
-                            />
-                            <span className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 text-xs">円</span>
-                          </div>
-                        </div>
-                        <div className="flex-[2]">
-                          <label className="block text-[11px] font-bold text-gray-500 mb-1">数量</label>
-                          <div className="relative">
-                            <input
-                              type="number"
-                              value={can18}
-                              onChange={(e) => setCan18(e.target.value)}
-                              onFocus={handleFocus}
-                              className="w-full pl-2 pr-6 py-2 bg-blue-50 border border-blue-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-right font-bold text-blue-700 text-lg"
-                              placeholder="0"
-                            />
-                            <span className="absolute right-2 top-1/2 -translate-y-1/2 text-blue-500 text-xs">缶</span>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* 20L缶ブロック */}
-                    <div className="bg-white p-3 rounded-xl border border-blue-200 shadow-sm">
-                      <div className="flex items-center justify-between mb-2">
-                        <span className="font-bold text-blue-800">20L 缶</span>
-                      </div>
-                      <div className="flex gap-2">
-                        <div className="flex-[3]">
-                          <label className="block text-[11px] font-bold text-gray-500 mb-1">1缶の単価 (税込)</label>
-                          <div className="relative">
-                            <input
-                              type="number"
-                              value={priceCan20}
-                              onChange={(e) => setPriceCan20(e.target.value)}
-                              onFocus={handleFocus}
-                              className="w-full pl-2 pr-6 py-2 bg-gray-50 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-right font-medium"
-                              placeholder="0"
-                            />
-                            <span className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 text-xs">円</span>
-                          </div>
-                        </div>
-                        <div className="flex-[2]">
-                          <label className="block text-[11px] font-bold text-gray-500 mb-1">数量</label>
-                          <div className="relative">
-                            <input
-                              type="number"
-                              value={can20}
-                              onChange={(e) => setCan20(e.target.value)}
-                              onFocus={handleFocus}
-                              className="w-full pl-2 pr-6 py-2 bg-blue-50 border border-blue-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-right font-bold text-blue-700 text-lg"
-                              placeholder="0"
-                            />
-                            <span className="absolute right-2 top-1/2 -translate-y-1/2 text-blue-500 text-xs">缶</span>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* その他（リットル指定）ブロック */}
-                    <div className="bg-white p-3 rounded-xl border border-blue-200 shadow-sm relative overflow-hidden">
-                      <div className="absolute top-0 left-0 w-1 h-full bg-blue-400"></div>
-                      <div className="flex items-center justify-between mb-2 pl-2">
-                        <span className="font-bold text-blue-800">その他給油 <span className="text-[10px] text-gray-500 font-normal">(タンク・端数分)</span></span>
-                      </div>
-                      <div className="flex gap-2 pl-2">
-                        <div className="flex-[3]">
-                          <label className="block text-[11px] font-bold text-gray-500 mb-1">指定リットル数</label>
-                          <div className="relative">
-                            <input
-                              type="number"
-                              value={otherVolume}
-                              onChange={(e) => setOtherVolume(e.target.value)}
-                              onFocus={handleFocus}
-                              className="w-full pl-2 pr-6 py-2 bg-blue-50 border border-blue-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-right font-bold text-blue-700 text-lg"
-                              placeholder="0"
-                              step="0.1"
-                            />
-                            <span className="absolute right-2 top-1/2 -translate-y-1/2 text-blue-500 text-xs">L</span>
-                          </div>
-                        </div>
-                        <div className="flex-[2] flex flex-col justify-end pb-1 items-end pr-1">
-                          <span className="text-[10px] text-gray-400 mb-0.5">加算額 (1L換算)</span>
-                          <span className="font-bold text-gray-700">
-                            +¥{Math.round((parseFloat(displayUnitPriceL) || 0) * (parseFloat(otherVolume) || 0)).toLocaleString()}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                    
-                    {/* 合計給油量ハイライト */}
-                    <div className="flex justify-between items-center bg-white p-3 rounded-lg border border-blue-200">
-                      <div className="flex items-center gap-1 text-blue-800 font-bold text-sm">
-                        <DropletIcon />
-                        <span>合計給油量</span>
-                      </div>
-                      <div className="text-xl font-black text-blue-600">
-                        {Math.round(result.calculatedVolume * 10) / 10} <span className="text-sm font-medium text-blue-400">L</span>
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              {/* Results Section */}
-              <div className="bg-gray-50 rounded-xl p-5 border border-gray-200 mt-6 shadow-sm">
-                <div className="flex items-center gap-2 mb-4 text-gray-800">
-                  <CalculatorIcon />
-                  <h2 className="font-bold text-lg">計算結果</h2>
-                </div>
-
-                <div className="space-y-3">
-                  <div className="flex justify-between items-end border-b border-gray-300 pb-3">
-                    <span className="text-gray-600 font-medium">支払総額</span>
-                    <span className="text-3xl font-bold text-gray-900">¥{result.totalAmount.toLocaleString()}</span>
-                  </div>
-
-                  <div className="space-y-2 pt-2 text-sm">
-                    <div className="flex justify-between items-center text-gray-600">
-                      <span>本体価格 (税抜)</span>
-                      <span className="font-medium">¥{result.basePriceTotal.toLocaleString()}</span>
-                    </div>
-                    <div className="flex justify-between items-center text-gray-600">
-                      <span>消費税 (10%)</span>
-                      <span className="font-medium">¥{result.consumptionTaxTotal.toLocaleString()}</span>
-                    </div>
-                    
-                    {fuelType === 'diesel' && (
-                      <div className="flex justify-between items-center text-gray-800 font-bold bg-white p-2 rounded-lg border border-gray-200 mt-2">
-                        <span>軽油引取税 (15円/L)</span>
-                        <span className="text-red-600">¥{result.taxAmount.toLocaleString()}</span>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </div>
-
-              {/* お釣り計算セクション */}
-              <div className="bg-amber-50 rounded-xl p-5 border border-amber-200 mt-4 shadow-sm">
-                <div className="flex items-center gap-2 mb-4 text-amber-800">
-                  <BanknoteIcon />
-                  <h2 className="font-bold text-lg">お会計・お釣り計算</h2>
-                </div>
-                
-                <div className="space-y-4">
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-1">お預かり金額</label>
-                    <div className="relative">
-                      <input
-                        type="number"
-                        value={receivedAmount}
-                        onChange={(e) => setReceivedAmount(e.target.value)}
-                        onFocus={handleFocus}
-                        className="w-full pl-4 pr-12 py-3 bg-white border border-amber-300 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none transition-all text-lg font-medium"
-                        placeholder="預かり額を入力"
-                      />
-                      <span className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 font-medium">円</span>
-                    </div>
-                  </div>
-
-                  <div className="flex justify-between items-end border-t border-amber-200 pt-4 mt-2">
-                    <span className="text-gray-700 font-bold">お釣り</span>
-                    <span className={`text-3xl font-bold ${hasReceivedInput && changeAmount < 0 ? 'text-red-600' : 'text-amber-700'}`}>
-                      {!hasReceivedInput 
-                        ? '¥0' 
-                        : changeAmount < 0 
-                          ? `不足 ¥${Math.abs(changeAmount).toLocaleString()}` 
-                          : `¥${changeAmount.toLocaleString()}`
-                      }
-                    </span>
-                  </div>
-                </div>
-              </div>
-
-              {/* インフォメーション・アラート群 */}
-              {fuelType === 'diesel' && (
-                <div className="bg-red-50 rounded-xl p-4 border border-red-100 flex items-start gap-3 mt-6">
-                  <div className="text-red-600 shrink-0 mt-0.5"><TrendingDownIcon /></div>
-                  <div>
-                    <p className="text-sm text-red-800 font-bold">暫定税率時代からの値下げ額</p>
-                    <p className="text-2xl font-black text-red-600 mt-1">-¥{result.savedAmount.toLocaleString()}</p>
-                    <p className="text-xs text-red-700 mt-1">※旧税率32.1円/Lで計算した場合との差額</p>
-                  </div>
-                </div>
-              )}
-              
-              {fuelType === 'other' && (
-                <div className="flex gap-2 text-xs text-gray-500 bg-gray-100 p-3 rounded-lg mt-6">
-                  <div className="shrink-0 text-gray-400"><InfoIcon /></div>
-                  <p>免税軽油や重油などには軽油引取税がかからないため、税込総額から10%の消費税を割り戻して計算します。</p>
-                </div>
-              )}
-
-              {fuelType === 'polycan' && (
-                <div className="flex gap-2 text-xs text-blue-600 bg-blue-50 p-3 rounded-lg mt-6 border border-blue-100">
-                  <div className="shrink-0 text-blue-500"><InfoIcon /></div>
-                  <p>18L缶の単価を基準に1Lあたりの単価と20L缶の単価を自動計算します。タンクへの直接給油などは「その他給油」にリットル数を入力してください。</p>
-                </div>
-              )}
-
-              {/* ★中野油業 オリジナルロゴフッター★ */}
-              <div className="mt-8 bg-black p-5 sm:p-6 rounded-xl flex flex-col items-center justify-center w-full overflow-hidden shadow-inner border border-gray-800">
-                <div className="flex items-center text-3xl sm:text-4xl font-black tracking-[0.1em] mb-1 logo-font">
-                  <span className="text-white">㈱中野</span>
-                  <span className="text-[#ff0000] mx-0.5">油</span>
-                  <span className="text-white">業</span>
-                </div>
-                
-                <div className="w-full relative flex items-start h-10 mt-1 mb-1">
-                  <div className="flex-grow border-t-[3px] border-white mt-[14px] ml-2"></div>
-                  <div className="w-[36px] h-full relative shrink-0">
-                    <svg viewBox="0 0 40 40" className="w-full h-full drop-shadow-md">
-                      <line x1="0" y1="14" x2="8" y2="22" stroke="white" strokeWidth="3" />
-                      <rect x="8" y="19" width="12" height="15" stroke="white" strokeWidth="3" fill="transparent" rx="1" />
-                      <path d="M 20,22 C 26,22 28,24 28,26.5 C 28,29 26,31 20,31" stroke="white" strokeWidth="2.5" fill="transparent" />
-                      <line x1="8" y1="34" x2="3" y2="40" stroke="white" strokeWidth="2.5" strokeLinecap="round" />
-                    </svg>
-                  </div>
-                </div>
-
-                <div className="text-white text-[11px] sm:text-xs tracking-[0.25em] font-mono pr-4 mt-1">
-                  NAKANO YUGYO corp.
-                </div>
-              </div>
-
+            <div class="flex justify-between items-center text-gray-600">
+              <span>消費税 (10%)</span>
+              <span id="consumption-tax-total" class="font-medium">¥0</span>
+            </div>
+            
+            <div id="diesel-tax-row" class="flex justify-between items-center diesel-tax-box">
+              <span>軽油引取税 (15円/L)</span>
+              <span id="diesel-tax" class="text-red-600">¥0</span>
             </div>
           </div>
         </div>
-      );
+      </div>
+
+      <div class="bg-amber-50 rounded-xl p-5 border border-amber-200 mt-4 shadow-sm">
+        <div class="flex items-center gap-2 mb-4 text-amber-800">
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="6" width="20" height="12" rx="2"></rect><circle cx="12" cy="12" r="2"></circle><path d="M6 12h.01M18 12h.01"></path></svg>
+          <h2 class="font-bold text-lg">お会計・お釣り計算</h2>
+        </div>
+        
+        <div class="space-y-4">
+          <div>
+            <label class="block text-sm font-semibold text-gray-700 mb-1">お預かり金額</label>
+            <div class="relative">
+              <input type="number" id="receivedAmount" class="input-field-amber" placeholder="お客様からのお預かり額を入力" oninput="calculate()" onfocus="this.select()">
+              <span class="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 font-medium">円</span>
+            </div>
+          </div>
+
+          <div class="flex justify-between items-end border-t border-amber-200 pt-4 mt-2">
+            <span class="text-gray-700 font-bold">お釣り</span>
+            <span id="change-amount" class="text-3xl font-bold text-amber-700">¥0</span>
+          </div>
+        </div>
+      </div>
+
+      <div id="diesel-alert" class="bg-red-50 rounded-xl p-4 border border-red-100 flex gap-3 mt-6">
+        <div class="text-red-600 shrink-0 mt-0px5">
+          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 17 13.5 8.5 8.5 13.5 2 7"></polyline><polyline points="16 17 22 17 22 11"></polyline></svg>
+        </div>
+        <div>
+          <p class="text-sm text-red-800 font-bold">暫定税率時代からの値下げ額</p>
+          <p id="saved-amount" class="text-2xl font-black text-red-600 mt-1">-¥0</p>
+          <p class="text-xs text-red-700 mt-1">※旧税率32.1円/Lで計算した場合との差額</p>
+        </div>
+      </div>
+
+      <div class="mt-8 bg-black p-6 rounded-xl-footer flex flex-col items-center justify-center w-full overflow-hidden shadow-inner border border-gray-800">
+        <div class="flex items-center text-3xl sm:text-4xl-sm font-black tracking-wide-logo mb-1 logo-font">
+          <span class="text-white">㈱中野</span>
+          <span class="text-[#ff0000] mx-0px5">油</span>
+          <span class="text-white">業</span>
+        </div>
+        
+        <div class="w-full relative flex items-start h-10 mt-1 mb-1">
+          <div class="flex-grow border-t-3 border-white mt-14px ml-2"></div>
+          <div class="w-36px h-full relative shrink-0">
+            <svg viewBox="0 0 40 40" class="w-full h-full drop-shadow-md">
+              <line x1="0" y1="14" x2="8" y2="22" stroke="white" stroke-width="3" />
+              <rect x="8" y="19" width="12" height="15" stroke="white" stroke-width="3" fill="transparent" rx="1" />
+              <path d="M 20,22 C 26,22 28,24 28,26.5 C 28,29 26,31 20,31" stroke="white" stroke-width="2.5" fill="transparent" />
+              <line x1="8" y1="34" x2="3" y2="40" stroke="white" stroke-width="2.5" stroke-linecap="round" />
+            </svg>
+          </div>
+        </div>
+
+        <div class="text-footer-sub">
+          NAKANO YUGYO corp.
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <script>
+    let fuelType = 'diesel';
+
+    function setFuel(type) {
+      fuelType = type;
+      const btnDiesel = document.getElementById('tab-diesel');
+      const btnOther = document.getElementById('tab-other');
+      const priceInput = document.getElementById('pricePerLiter');
+      const dieselTaxRow = document.getElementById('diesel-tax-row');
+      const dieselAlert = document.getElementById('diesel-alert');
+
+      if (type === 'diesel') {
+        btnDiesel.className = 'flex-1 py-2px5 text-sm font-bold rounded-lg transition-all tab-btn active';
+        btnOther.className = 'flex-1 py-2px5 text-sm font-bold rounded-lg transition-all tab-btn inactive';
+        priceInput.value = '130';
+        dieselTaxRow.style.display = 'flex';
+        dieselAlert.style.display = 'flex';
+      } else {
+        btnDiesel.className = 'flex-1 py-2px5 text-sm font-bold rounded-lg transition-all tab-btn inactive';
+        btnOther.className = 'flex-1 py-2px5 text-sm font-bold rounded-lg transition-all tab-btn active';
+        priceInput.value = '160';
+        dieselTaxRow.style.display = 'none';
+        dieselAlert.style.display = 'none';
+      }
+      calculate();
     }
 
-    const root = ReactDOM.createRoot(document.getElementById('root'));
-    root.render(<App />);
+    function calculate() {
+      const volume = parseFloat(document.getElementById('volume').value);
+      const pricePerLiter = parseFloat(document.getElementById('pricePerLiter').value);
+      const receivedAmountStr = document.getElementById('receivedAmount').value;
+      const receivedAmount = parseInt(receivedAmountStr, 10);
+
+      const totalAmountEl = document.getElementById('total-amount');
+      const basePriceTotalEl = document.getElementById('base-price-total');
+      const consumptionTaxTotalEl = document.getElementById('consumption-tax-total');
+      const dieselTaxEl = document.getElementById('diesel-tax');
+      const savedAmountEl = document.getElementById('saved-amount');
+      const changeAmountEl = document.getElementById('change-amount');
+
+      if (isNaN(volume) || isNaN(pricePerLiter) || volume <= 0 || pricePerLiter <= 0) {
+        totalAmountEl.innerText = '¥0';
+        basePriceTotalEl.innerText = '¥0';
+        consumptionTaxTotalEl.innerText = '¥0';
+        dieselTaxEl.innerText = '¥0';
+        savedAmountEl.innerText = '-¥0';
+        changeAmountEl.innerText = '¥0';
+        return;
+      }
+
+      const totalAmount = pricePerLiter * volume;
+      const roundedTotal = Math.round(totalAmount);
+      totalAmountEl.innerText = '¥' + roundedTotal.toLocaleString();
+
+      let basePriceTotal = 0;
+      let consumptionTaxTotal = 0;
+      let taxAmount = 0;
+      let savedAmount = 0;
+
+      if (fuelType === 'diesel') {
+        taxAmount = volume * 15.0;
+        const basePricePerLiter = (pricePerLiter - 15.0) / 1.10;
+        basePriceTotal = basePricePerLiter * volume;
+        consumptionTaxTotal = basePriceTotal * 0.10;
+        savedAmount = (32.1 - 15.0) * volume;
+
+        dieselTaxEl.innerText = '¥' + Math.round(taxAmount).toLocaleString();
+        savedAmountEl.innerText = '-¥' + Math.round(savedAmount).toLocaleString();
+      } else {
+        basePriceTotal = totalAmount / 1.10;
+        consumptionTaxTotal = totalAmount - basePriceTotal;
+      }
+
+      basePriceTotalEl.innerText = '¥' + Math.round(basePriceTotal).toLocaleString();
+      consumptionTaxTotalEl.innerText = '¥' + Math.round(consumptionTaxTotal).toLocaleString();
+
+      // お釣り計算ロジック
+      if (receivedAmountStr === '' || isNaN(receivedAmount)) {
+        changeAmountEl.innerText = '¥0';
+        changeAmountEl.style.color = '#b45309'; // 通常の琥珀色
+      } else {
+        const changeAmount = receivedAmount - roundedTotal;
+        if (changeAmount < 0) {
+          changeAmountEl.innerText = '不足 ¥' + Math.abs(changeAmount).toLocaleString();
+          changeAmountEl.style.color = '#dc2626'; // 不足時は赤
+        } else {
+          changeAmountEl.innerText = '¥' + changeAmount.toLocaleString();
+          changeAmountEl.style.color = '#b45309'; // お釣りは琥珀色
+        }
+      }
+    }
+
+    // 初回計算実行
+    calculate();
   </script>
 </body>
 </html>
